@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 import subprocess
 import datetime
+import re
 
 app = FastAPI()
 
@@ -15,6 +16,16 @@ app.add_middleware(
 
 def get_db():
     return sqlite3.connect('/root/vpn_users.db', check_same_thread=False)
+
+# Bazaga ustun qo'shish (agar yo'q bo'lsa)
+conn = get_db()
+cursor = conn.cursor()
+cursor.execute("PRAGMA table_info(users)")
+columns = [info[1] for info in cursor.fetchall()]
+if 'client_pub_key' not in columns:
+    cursor.execute("ALTER TABLE users ADD COLUMN client_pub_key TEXT")
+    conn.commit()
+conn.close()
 
 @app.get("/api/user/{user_id}")
 def get_user_info(user_id: int):
@@ -53,7 +64,20 @@ def create_vpn(user_id: int):
     try:
         result = subprocess.run(['bash', '/root/create_client.sh', f"user_{user_id}"], capture_output=True, text=True)
         if result.returncode == 0:
-            return {"status": "success", "config": result.stdout.strip()}
+            config_text = result.stdout.strip()
+            
+            # Konfiguratsiyadan PublicKey ni ajratib olish
+            match = re.search(r"PublicKey = (.*)", config_text)
+            if match:
+                client_pub_key = match.group(1).strip()
+                # Bazaga saqlash
+                conn = get_db()
+                cursor = conn.cursor()
+                cursor.execute("UPDATE users SET client_pub_key = ? WHERE user_id = ?", (client_pub_key, user_id))
+                conn.commit()
+                conn.close()
+
+            return {"status": "success", "config": config_text}
         else:
             return {"status": "error", "message": "Serverda xatolik yuz berdi."}
     except Exception as e:
