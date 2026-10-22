@@ -7,26 +7,31 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        body { margin: 0; padding: 20px; background-color: var(--tg-theme-bg-color, #1c1c1e); color: var(--tg-theme-text-color, #ffffff); display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
-        .header { text-align: center; margin-bottom: 30px; margin-top: 10px; }
+        body { margin: 0; padding: 20px; background-color: var(--tg-theme-bg-color, #1c1c1e); color: var(--tg-theme-text-color, #ffffff); display: flex; flex-direction: column; align-items: center; height: 100vh; overflow-y: auto; }
+        .header { text-align: center; margin-bottom: 20px; margin-top: 10px; }
         .header h1 { margin: 0; font-size: 24px; font-weight: 800; }
         .header p { margin: 5px 0 0; color: #8e8e93; font-size: 14px; }
-        .status-badge { background-color: rgba(255, 59, 48, 0.2); color: #ff3b30; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 40px; transition: all 0.3s ease; }
+        .status-badge { background-color: rgba(255, 59, 48, 0.2); color: #ff3b30; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 30px; transition: all 0.3s ease; }
         .status-badge.connected { background-color: rgba(52, 199, 89, 0.2); color: #34c759; }
-        .vpn-btn-container { position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 40px; }
-        .vpn-btn { width: 180px; height: 180px; border-radius: 50%; background: linear-gradient(145deg, #2c2c2e, #1c1c1e); box-shadow: 10px 10px 20px #121212, -10px -10px 20px #262628; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; border: none; color: white; outline: none; }
+        .vpn-btn-container { position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 30px; }
+        .vpn-btn { width: 160px; height: 160px; border-radius: 50%; background: linear-gradient(145deg, #2c2c2e, #1c1c1e); box-shadow: 10px 10px 20px #121212, -10px -10px 20px #262628; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; border: none; color: white; outline: none; }
         .vpn-btn:active { transform: scale(0.95); }
-        .vpn-btn svg { width: 50px; height: 50px; margin-bottom: 10px; fill: #ff3b30; transition: fill 0.3s; }
+        .vpn-btn svg { width: 45px; height: 45px; margin-bottom: 10px; fill: #ff3b30; transition: fill 0.3s; }
         .vpn-btn.active svg { fill: #34c759; }
-        .info-cards { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; }
-        .card { background-color: var(--tg-theme-secondary-bg-color, #2c2c2e); padding: 16px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; }
-        .card-title { font-size: 14px; color: #8e8e93; }
-        .card-value { font-size: 16px; font-weight: 600; }
         
-        /* Yangi qo'shilgan tugmalar dizayni */
-        .action-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; border-radius: 16px; text-align: center; font-weight: 600; font-size: 16px; text-decoration: none; border: none; cursor: pointer; }
+        .action-container { width: 100%; max-width: 400px; display: none; flex-direction: column; }
+        .action-btn { display: block; width: 100%; padding: 16px; margin-bottom: 10px; border-radius: 16px; text-align: center; font-weight: 600; font-size: 16px; text-decoration: none; border: none; cursor: pointer; }
         .btn-primary { background-color: #34c759; color: white; }
         .btn-secondary { background-color: #2c2c2e; color: white; }
+
+        /* Qo'llanma dizayni */
+        .guide-box { background-color: #2c2c2e; padding: 20px; border-radius: 16px; margin-top: 20px; text-align: left; }
+        .guide-box h3 { margin-top: 0; color: #34c759; font-size: 18px; }
+        .guide-step { display: flex; margin-bottom: 15px; align-items: flex-start; }
+        .step-num { background-color: #34c759; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; margin-right: 10px; flex-shrink: 0; font-size: 14px; }
+        .step-text { font-size: 14px; line-height: 1.4; color: #e5e5ea; }
+        .app-links { display: flex; gap: 10px; margin-top: 15px; }
+        .app-btn { flex: 1; text-align: center; padding: 10px; border-radius: 10px; background-color: #1c1c1e; color: white; text-decoration: none; font-size: 12px; border: 1px solid #3a3a3c; }
     </style>
 </head>
 <body>
@@ -40,37 +45,17 @@
 
     <div class="vpn-btn-container" id="btnContainer">
         <button class="vpn-btn" id="mainBtn">
-            <svg viewBox="0 0 24 24">
-                <path d="M16.56 5.44l-1.45 1.45A8 8 0 1 1 12 20a8.01 8.01 0 0 1-6.61-3.55l-1.45 1.45A9.95 9.95 0 0 0 12 22c5.52 0 10-4.48 10-10 0-2.45-.88-4.71-2.35-6.46l-1.09-.1zM11 2h2v10h-2V2z"/>
-            </svg>
+            <svg viewBox="0 0 24 24"><path d="M16.56 5.44l-1.45 1.45A8 8 0 1 1 12 20a8.01 8.01 0 0 1-6.61-3.55l-1.45 1.45A9.95 9.95 0 0 0 12 22c5.52 0 10-4.48 10-10 0-2.45-.88-4.71-2.35-6.46l-1.09-.1zM11 2h2v10h-2V2z"/></svg>
             <span id="btnText">Ulash</span>
         </button>
     </div>
 
-    <div id="actionContainer" style="width: 100%; max-width: 400px; display: none; flex-direction: column;"></div>
-
-    <div class="info-cards">
-        <div class="card">
-            <span class="card-title">Tarif:</span>
-            <span class="card-value">1 Oylik</span>
-        </div>
-        <div class="card">
-            <span class="card-title">Muddat:</span>
-            <span class="card-value" id="subDate">Yuklanmoqda...</span>
-        </div>
-        <div class="card">
-            <span class="card-title">Server:</span>
-            <span class="card-value">🇳🇱 Amsterdam</span>
-        </div>
-    </div>
+    <div id="actionContainer" class="action-container"></div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        
-        // TO'G'RILANGAN API MANZILI
         const API_URL = "https://136.244.110.2.nip.io/api";
-        
         const user = tg.initDataUnsafe?.user;
         const userId = user ? user.id : null;
         
@@ -81,17 +66,6 @@
         const statusBadge = document.getElementById("statusBadge");
         const btnContainer = document.getElementById("btnContainer");
         const actionContainer = document.getElementById("actionContainer");
-
-        async function loadUserData() {
-            if (!userId) return;
-            try {
-                const res = await fetch(`${API_URL}/user/${userId}`);
-                if (!res.ok) throw new Error();
-                const data = await res.json();
-                document.getElementById("subDate").innerText = data.sub_end || "Obuna yo'q";
-            } catch (e) { document.getElementById("subDate").innerText = "Aloqa yo'q"; }
-        }
-        loadUserData();
 
         mainBtn.addEventListener("click", async () => {
             if (!userId) return;
@@ -112,7 +86,6 @@
                     btnContainer.style.display = "none";
                     actionContainer.style.display = "flex";
                     
-                    // 1. Faylni yuklab olish uchun tugma yaratish
                     const blob = new Blob([data.config], { type: 'text/plain' });
                     const fileUrl = URL.createObjectURL(blob);
                     
@@ -123,21 +96,46 @@
                         <button id="copyBtn" class="action-btn btn-secondary">
                             📋 Matnni nusxalash (Copy)
                         </button>
-                        <p style="text-align:center; color:#8e8e93; font-size:12px; margin-top:10px;">
-                            Yuklab olingan faylni WireGuard dasturida oching yoki matnni nusxalab, dasturdagi "Clipboard'dan yaratish" bo'limiga qo'ying.
-                        </p>
+                        
+                        <div class="guide-box">
+                            <h3>Endi qanday ulanaman? 🤔</h3>
+                            
+                            <div class="guide-step">
+                                <div class="step-num">1</div>
+                                <div class="step-text"><b>WireGuard</b> dasturini telefoningizga o'rnating. (Agar o'rnatilmagan bo'lsa, pastdagi tugmalardan yuklab oling).</div>
+                            </div>
+                            
+                            <div class="guide-step">
+                                <div class="step-num">2</div>
+                                <div class="step-text">Dasturga kirib, o'ng yuqoridagi <b>"+"</b> belgisini bosing.</div>
+                            </div>
+
+                            <div class="guide-step">
+                                <div class="step-num">3</div>
+                                <div class="step-text">Agar faylni yuklagan bo'lsangiz <b>"Fayldan yaratish"</b> ni, agar nusxalagan bo'lsangiz <b>"Clipboard'dan yaratish"</b> ni tanlang.</div>
+                            </div>
+
+                            <div class="guide-step">
+                                <div class="step-num">4</div>
+                                <div class="step-text">Ro'yxatda paydo bo'lgan <b>JT_VPN</b> yozuvini yoqing (yashil holatga keltiring). Tayyor!</div>
+                            </div>
+
+                            <div class="app-links">
+                                <a href="https://apps.apple.com/us/app/wireguard/id1441195209" class="app-btn" target="_blank">App Store (iPhone)</a>
+                                <a href="https://play.google.com/store/apps/details?id=com.wireguard.android" class="app-btn" target="_blank">Play Market (Android)</a>
+                            </div>
+                        </div>
                     `;
 
-                    // 2. Nusxalash (Copy) funksiyasi
                     document.getElementById("copyBtn").addEventListener("click", () => {
                         navigator.clipboard.writeText(data.config).then(() => {
-                            tg.showAlert("VPN kaliti nusxalandi! Endi WireGuard dasturiga o'tib, 'Clipboard'dan yaratish'ni bosing.");
+                            tg.showAlert("VPN matni nusxalandi! Endi WireGuard dasturiga o'tib, '+' -> 'Clipboard'dan yaratish'ni bosing.");
                         });
                     });
 
                 } else {
                     btnText.innerText = "Ulash";
-                    tg.showAlert("Xatolik: " + (data.message || "Noma'lum xato"));
+                    tg.showAlert("Xatolik yuz berdi.");
                 }
             } catch (e) {
                 btnText.innerText = "Ulash";
