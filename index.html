@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JT VPN</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { margin: 0; padding: 20px; background-color: var(--tg-theme-bg-color, #1c1c1e); color: var(--tg-theme-text-color, #ffffff); display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        .header { text-align: center; margin-bottom: 30px; margin-top: 10px; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 800; }
+        .header p { margin: 5px 0 0; color: #8e8e93; font-size: 14px; }
+        .status-badge { background-color: rgba(255, 59, 48, 0.2); color: #ff3b30; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 40px; transition: all 0.3s ease; }
+        .status-badge.connected { background-color: rgba(52, 199, 89, 0.2); color: #34c759; }
+        .vpn-btn-container { position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 40px; }
+        .vpn-btn { width: 180px; height: 180px; border-radius: 50%; background: linear-gradient(145deg, #2c2c2e, #1c1c1e); box-shadow: 10px 10px 20px #121212, -10px -10px 20px #262628; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; border: none; color: white; outline: none; }
+        .vpn-btn:active { transform: scale(0.95); }
+        .vpn-btn svg { width: 50px; height: 50px; margin-bottom: 10px; fill: #ff3b30; transition: fill 0.3s; }
+        .vpn-btn.active svg { fill: #34c759; }
+        .info-cards { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; }
+        .card { background-color: var(--tg-theme-secondary-bg-color, #2c2c2e); padding: 16px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .card-title { font-size: 14px; color: #8e8e93; }
+        .card-value { font-size: 16px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>JT VPN</h1>
+        <p id="userName">Yuklanmoqda...</p>
+    </div>
+
+    <div class="status-badge" id="statusBadge">Ulanmagan</div>
+
+    <div class="vpn-btn-container" id="btnContainer">
+        <button class="vpn-btn" id="mainBtn">
+            <svg viewBox="0 0 24 24">
+                <path d="M16.56 5.44l-1.45 1.45A8 8 0 1 1 12 20a8.01 8.01 0 0 1-6.61-3.55l-1.45 1.45A9.95 9.95 0 0 0 12 22c5.52 0 10-4.48 10-10 0-2.45-.88-4.71-2.35-6.46l-1.09-.1zM11 2h2v10h-2V2z"/>
+            </svg>
+            <span id="btnText">Ulash</span>
+        </button>
+    </div>
+
+    <div id="qrContainer" style="background: white; padding: 15px; border-radius: 20px; margin-bottom: 20px; display: none; justify-content: center; align-items: center;"></div>
+
+    <div class="info-cards">
+        <div class="card">
+            <span class="card-title">Tarif:</span>
+            <span class="card-value">1 Oylik</span>
+        </div>
+        <div class="card">
+            <span class="card-title">Muddat:</span>
+            <span class="card-value" id="subDate">Yuklanmoqda...</span>
+        </div>
+        <div class="card">
+            <span class="card-title">Server:</span>
+            <span class="card-value">🇳🇱 Amsterdam</span>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        // TO'G'RILANGAN API MANZILI
+        const API_URL = "https://136.244.110.2.nip.io/api";
+        
+        const user = tg.initDataUnsafe?.user;
+        const userId = user ? user.id : null;
+        
+        if (user) { 
+            document.getElementById("userName").innerText = user.first_name; 
+        }
+
+        const mainBtn = document.getElementById("mainBtn");
+        const btnText = document.getElementById("btnText");
+        const statusBadge = document.getElementById("statusBadge");
+        const btnContainer = document.getElementById("btnContainer");
+        const qrContainer = document.getElementById("qrContainer");
+
+        async function loadUserData() {
+            if (!userId) return;
+            try {
+                const res = await fetch(`${API_URL}/user/${userId}`);
+                if (!res.ok) throw new Error("Server xatosi");
+                const data = await res.json();
+                document.getElementById("subDate").innerText = data.sub_end || "Obuna yo'q";
+            } catch (e) { 
+                document.getElementById("subDate").innerText = "Aloqa yo'q"; 
+            }
+        }
+        
+        loadUserData();
+
+        mainBtn.addEventListener("click", async () => {
+            if (!userId) return;
+            btnText.innerText = "Kutilmoqda...";
+            tg.HapticFeedback.impactOccurred("medium");
+
+            try {
+                const res = await fetch(`${API_URL}/connect/${userId}`, { method: "POST" });
+                if (!res.ok) throw new Error("Server xatosi");
+                const data = await res.json();
+
+                if (data.status === "success") {
+                    btnText.innerText = "Ulandi";
+                    mainBtn.classList.add("active");
+                    statusBadge.innerText = "Xavfsiz ulanish faol";
+                    statusBadge.classList.add("connected");
+                    
+                    btnContainer.style.display = "none";
+                    qrContainer.style.display = "flex";
+                    qrContainer.innerHTML = "";
+                    
+                    new QRCode(qrContainer, {
+                        text: data.config,
+                        width: 200,
+                        height: 200,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                } else {
+                    btnText.innerText = "Ulash";
+                    tg.showAlert("Xatolik: " + (data.message || "Noma'lum xato"));
+                }
+            } catch (e) {
+                btnText.innerText = "Ulash";
+                tg.showAlert("Server bilan aloqa uzildi. Iltimos qayta urinib ko'ring.");
+            }
+        });
+    </script>
+</body>
+</html>
