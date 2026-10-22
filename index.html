@@ -1,190 +1,154 @@
-import asyncio
-import sqlite3
-import subprocess
-import datetime
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.filters import Command
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
-
-# --- SOZLAMALAR ---
-BOT_TOKEN = "8908688672:AAEqIbuLWciJJ_ahyLf4PekqqIsjrymUcUw" 
-ADMIN_ID = 8870374351
-WEB_APP_URL = "https://turayev9201-hue.github.io/JT-VPN/"
-
-# RASM HAVOLASI: O'zingizning logotipingiz havolasini shu yerga qo'ying. 
-# Hozircha men umumiy rasm qo'ydim, lekin o'zingiznikini qo'yishingiz kerak.
-BANNER_URL = "https://i.imgur.com/your_image.jpg" 
-
-CARDS = [
-    ("Uzcard", "20,000 so'm", "5614 6818 5290 5201"),
-    ("Visa", "2$", "4231 2000 9704 3946"),
-    ("Sberbank", "250₽", "2202 2023 2406 6681")
-]
-
-# --- BAZA ---
-conn = sqlite3.connect('/root/vpn_users.db')
-cursor = conn.cursor()
-cursor.execute('''CREATE TABLE IF NOT EXISTS users 
-                  (user_id INTEGER PRIMARY KEY, username TEXT, sub_end TEXT)''')
-conn.commit()
-
-class PaymentState(StatesGroup):
-    waiting_for_chek = State()
-
-bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher()
-
-# --- CHIROYLI START MENYUSI ---
-@dp.message(Command("start"))
-async def cmd_start(message: types.Message):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 To'lov qilish va Sotib Olish", callback_data="buy_vpn")],
-        [InlineKeyboardButton(text="ℹ️ Ma'lumot va Yordam", callback_data="info")]
-    ])
-    
-    text = (
-        f"Assalomu alaykum, <b>{message.from_user.first_name}</b>! 👋\n\n"
-        "🌟 <b>JT VPN</b> — Tezkor, xavfsiz va cheklovlarsiz internet dunyosi.\n\n"
-        "✅ <b>Nima uchun bizni tanlashadi?</b>\n"
-        "⚡️ Yuqori tezlik va barqarorlik\n"
-        "🛡️ Shaxsiy ma'lumotlar to'liq himoyada\n"
-        "🌍 Dunyo bo'ylab serverlar (Niderlandiya)\n"
-        "📱 Telefon, planshet va kompyuterda ishlaydi\n\n"
-        "👇 Boshlash uchun quyidagi tugmani bosing:"
-    )
-    
-    try:
-        # Rasm bilan birga yuborish
-        await message.answer_photo(
-            photo=BANNER_URL,
-            caption=text,
-            reply_markup=kb,
-            parse_mode="HTML"
-        )
-    except Exception:
-        # Agar rasm havolasi xato bo'lsa, oddiy matn bilan yuboradi
-        await message.answer(text, reply_markup=kb, parse_mode="HTML")
-
-@dp.callback_query(F.data == "info")
-async def show_info(callback: types.CallbackQuery):
-    text = (
-        "ℹ️ <b>JT VPN haqida ma'lumot</b>\n\n"
-        "Bu xizmat orqali siz Telegram orqali bir necha soniyada o'zingizning shaxsiy VPN kalitingizni olasiz.\n\n"
-        "💰 <b>Tarif:</b> 1 oylik — 20,000 so'm (yoki 2$ / 250₽)\n"
-        "📱 <b>Qurilmalar:</b> Barcha turdagi telefon va kompyuterlar uchun mos.\n\n"
-        "Savollaringiz bo'lsa, adminga murojaat qiling: @Asoschi_JT"
-    )
-    await callback.message.answer(text, parse_mode="HTML")
-    await callback.answer()
-
-# --- CHIROYLI TO'LOV BO'LIMI ---
-@dp.callback_query(F.data == "buy_vpn")
-async def process_buy(callback: types.CallbackQuery, state: FSMContext):
-    text = (
-        "💳 <b>To'lov qilish (1 oylik tarif)</b>\n\n"
-        "Quyidagi kartalardan biriga o'tkazma qiling:\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-    )
-    for name, amount, card in CARDS:
-        # Karta raqamlari ustiga bosganda avtomatik nusxalanadi (code tegi orqali)
-        text += f"🏦 <b>{name}:</b> {amount}\n"
-        text += f"<code>{card}</code>\n"
-        text += "━━━━━━━━━━━━━━━━━━━━\n"
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JT VPN</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { margin: 0; padding: 20px; background-color: var(--tg-theme-bg-color, #1c1c1e); color: var(--tg-theme-text-color, #ffffff); display: flex; flex-direction: column; align-items: center; height: 100vh; overflow-y: auto; }
+        .header { text-align: center; margin-bottom: 20px; margin-top: 10px; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 800; }
+        .header p { margin: 5px 0 0; color: #8e8e93; font-size: 14px; }
+        .status-badge { background-color: rgba(255, 59, 48, 0.2); color: #ff3b30; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 30px; transition: all 0.3s ease; }
+        .status-badge.connected { background-color: rgba(52, 199, 89, 0.2); color: #34c759; }
         
-    text += (
-        "\n⚠️ <b>MUHIM QADAM:</b>\n"
-        "To'lovni amalga oshirgach, chek (skrinshot) rasmini <b>shu chatga yuboring</b>.\n\n"
-        "Admin tekshirib, tasdiqlashi bilan sizga shaxsiy VPN kalitingiz yuboriladi."
-    )
-    
-    # Orqaga qaytish tugmasi
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_start")]
-    ])
-    
-    await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
-    await state.set_state(PaymentState.waiting_for_chek)
-    await callback.answer()
+        .vpn-btn-container { position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 30px; }
+        .vpn-btn { width: 180px; height: 180px; border-radius: 50%; background: linear-gradient(145deg, #2c2c2e, #1c1c1e); box-shadow: 10px 10px 20px #121212, -10px -10px 20px #262628; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; border: none; color: white; outline: none; transition: all 0.3s; }
+        .vpn-btn:active { transform: scale(0.95); }
+        .vpn-btn svg { width: 60px; height: 60px; margin-bottom: 10px; fill: #ff3b30; transition: fill 0.3s; }
+        .vpn-btn.active svg { fill: #34c759; }
+        .vpn-btn span { font-size: 18px; font-weight: 600; }
 
-@dp.callback_query(F.data == "back_start")
-async def back_to_start(callback: types.CallbackQuery, state: FSMContext):
-    await state.clear()
-    await callback.message.delete()
-    # Qayta start menyusini chaqirish
-    await cmd_start(callback.message)
-
-# --- CHEKNI QABUL QILISH ---
-@dp.message(PaymentState.waiting_for_chek, F.photo)
-async def handle_receipt(message: types.Message, state: FSMContext):
-    photo_id = message.photo[-1].file_id
-    user_id = message.from_user.id
-    username = message.from_user.username or "Noma'lum"
-    
-    admin_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Tasdiqlash", callback_data=f"approve_{user_id}"),
-         InlineKeyboardButton(text="❌ Rad etish", callback_data=f"reject_{user_id}")]
-    ])
-    
-    await bot.send_photo(
-        chat_id=ADMIN_ID,
-        photo=photo_id,
-        caption=f"💰 <b>Yangi to'lov!</b>\n\n👤 Mijoz: @{username}\n🆔 ID: <code>{user_id}</code>\n\n<i>Chekni tekshirib, tasdiqlang.</i>",
-        reply_markup=admin_kb,
-        parse_mode="HTML"
-    )
-    
-    await message.answer(
-        "⏳ <b>Chekingiz qabul qilindi!</b>\n\n"
-        "Iltimos, admin tasdiqlashini kuting. Odatda bu 1-5 daqiqa vaqt oladi."
-    )
-    await state.clear()
-
-# --- TASDIQLASH VA 30 KUNLIK OBUNA YOZISH ---
-@dp.callback_query(F.data.startswith("approve_"))
-async def approve_payment(callback: types.CallbackQuery):
-    user_id = int(callback.data.split("_")[1])
-    
-    await callback.message.edit_caption(caption=callback.message.caption + "\n\n⏳ <i>Mijozga ruxsat berilmoqda...</i>", parse_mode="HTML")
-    
-    try:
-        # Bazaga 30 kunlik obunani yozamiz
-        sub_end_date = (datetime.datetime.now() + datetime.timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
-        cursor.execute("INSERT OR REPLACE INTO users (user_id, username, sub_end) VALUES (?, ?, ?)", (user_id, "mijoz", sub_end_date))
-        conn.commit()
-
-        # Mijozga WebApp havolasini yuboramiz
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🚀 Mening VPN'imni ochish", web_app=WebAppInfo(url=WEB_APP_URL))]
-        ])
+        .action-container { width: 100%; max-width: 400px; display: none; flex-direction: column; }
+        .action-btn { display: block; width: 100%; padding: 16px; margin-bottom: 12px; border-radius: 16px; text-align: center; font-weight: 600; font-size: 16px; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background-color: #34c759; color: white; box-shadow: 0 4px 15px rgba(52, 199, 89, 0.4); }
+        .btn-secondary { background-color: #2c2c2e; color: white; border: 1px solid #3a3a3c; }
         
-        await bot.send_message(
-            chat_id=user_id,
-            text="🎉 <b>To'lovingiz muvaffaqiyatli tasdiqlandi!</b>\n\n"
-                 "Sizga 1 oylik VPN xizmati faollashtirildi. "
-                 "Quyidagi tugma orqali shaxsiy VPN oynangizga kirib, kalitingizni oling.",
-            reply_markup=kb,
-            parse_mode="HTML"
-        )
+        .guide-box { background-color: #2c2c2e; padding: 20px; border-radius: 16px; margin-top: 10px; text-align: left; }
+        .guide-box h3 { margin-top: 0; color: #fff; font-size: 16px; margin-bottom: 15px; }
+        .guide-step { display: flex; margin-bottom: 15px; align-items: flex-start; }
+        .step-num { background-color: #34c759; color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; margin-right: 10px; flex-shrink: 0; font-size: 13px; }
+        .step-text { font-size: 14px; line-height: 1.4; color: #e5e5ea; }
         
-        await callback.message.edit_caption(caption=callback.message.caption.replace("⏳ <i>Mijozga ruxsat berilmoqda...</i>", "✅ <i>Tasdiqlandi va mijozga yuborildi!</i>"), parse_mode="HTML")
-    except Exception as e:
-        await callback.message.answer(f"❌ Xatolik: {e}")
-    
-    await callback.answer()
+        .info-cards { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+        .card { background-color: var(--tg-theme-secondary-bg-color, #2c2c2e); padding: 16px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .card-title { font-size: 14px; color: #8e8e93; }
+        .card-value { font-size: 16px; font-weight: 600; }
+    </style>
+</head>
+<body>
 
-@dp.callback_query(F.data.startswith("reject_"))
-async def reject_payment(callback: types.CallbackQuery):
-    user_id = int(callback.data.split("_")[1])
-    await bot.send_message(user_id, "❌ Kechirasiz, to'lovingiz tasdiqlanmadi. Iltimos, admin bilan bog'laning.")
-    await callback.message.edit_caption(caption=callback.message.caption + "\n\n❌ <i>Rad etildi</i>", parse_mode="HTML")
-    await callback.answer()
+    <div class="header">
+        <h1>JT VPN</h1>
+        <p id="userName">Yuklanmoqda...</p>
+    </div>
 
-async def main():
-    print("Bot ishga tushdi...")
-    await dp.start_polling(bot)
+    <div class="status-badge" id="statusBadge">Ulanmagan</div>
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    <div class="vpn-btn-container" id="btnContainer">
+        <button class="vpn-btn" id="mainBtn">
+            <svg viewBox="0 0 24 24"><path d="M16.56 5.44l-1.45 1.45A8 8 0 1 1 12 20a8.01 8.01 0 0 1-6.61-3.55l-1.45 1.45A9.95 9.95 0 0 0 12 22c5.52 0 10-4.48 10-10 0-2.45-.88-4.71-2.35-6.46l-1.09-.1zM11 2h2v10h-2V2z"/></svg>
+            <span id="btnText">Ulash</span>
+        </button>
+    </div>
+
+    <div id="actionContainer" class="action-container"></div>
+
+    <div class="info-cards">
+        <div class="card">
+            <span class="card-title">Tarif:</span>
+            <span class="card-value">1 Oylik</span>
+        </div>
+        <div class="card">
+            <span class="card-title">Muddat:</span>
+            <span class="card-value" id="subDate">Yuklanmoqda...</span>
+        </div>
+        <div class="card">
+            <span class="card-title">Server:</span>
+            <span class="card-value">🇳🇱 Amsterdam</span>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        const API_URL = "https://136.244.110.2.nip.io/api";
+        const user = tg.initDataUnsafe?.user;
+        const userId = user ? user.id : null;
+        
+        if (user) { document.getElementById("userName").innerText = user.first_name; }
+
+        const mainBtn = document.getElementById("mainBtn");
+        const btnText = document.getElementById("btnText");
+        const statusBadge = document.getElementById("statusBadge");
+        const btnContainer = document.getElementById("btnContainer");
+        const actionContainer = document.getElementById("actionContainer");
+
+        async function loadUserData() {
+            if (!userId) return;
+            try {
+                const res = await fetch(`${API_URL}/user/${userId}`);
+                const data = await res.json();
+                document.getElementById("subDate").innerText = data.sub_end;
+                if(data.status === 'expired' || data.status === 'new') { statusBadge.innerText = "Obuna yo'q"; }
+            } catch (e) { document.getElementById("subDate").innerText = "Aloqa yo'q"; }
+        }
+        loadUserData();
+
+        mainBtn.addEventListener("click", async () => {
+            if (!userId) return;
+            btnText.innerText = "Kutilmoqda...";
+            tg.HapticFeedback.impactOccurred("medium");
+
+            try {
+                const res = await fetch(`${API_URL}/connect/${userId}`, { method: "POST" });
+                const data = await res.json();
+
+                if (data.status === "success") {
+                    btnText.innerText = "Tayyor";
+                    mainBtn.classList.add("active");
+                    statusBadge.innerText = "Xavfsiz ulanish faol";
+                    statusBadge.classList.add("connected");
+                    
+                    btnContainer.style.display = "none";
+                    actionContainer.style.display = "flex";
+                    
+                    navigator.clipboard.writeText(data.config).catch(e => console.log(e));
+                    
+                    actionContainer.innerHTML = `
+                        <button id="openWgBtn" class="action-btn btn-primary">🚀 WireGuard'ni ochish</button>
+                        <button id="copyBtn" class="action-btn btn-secondary">📋 Kalitni nusxalash</button>
+                        <div class="guide-box">
+                            <h3>Qanday ulanaman?</h3>
+                            <div class="guide-step"><div class="step-num">1</div><div class="step-text">WireGuard dasturini oching.</div></div>
+                            <div class="guide-step"><div class="step-num">2</div><div class="step-text">O'ng yuqoridagi <b>"+"</b> belgisini bosing.</div></div>
+                            <div class="guide-step"><div class="step-num">3</div><div class="step-text"><b>"Clipboard'dan yaratish"</b> ni tanlang.</div></div>
+                            <div class="guide-step"><div class="step-num">4</div><div class="step-text">Ulanishni yoqing (yashil rang).</div></div>
+                        </div>
+                    `;
+
+                    document.getElementById("copyBtn").addEventListener("click", () => {
+                        navigator.clipboard.writeText(data.config).then(() => {
+                            tg.showAlert("Kalit nusxalandi! Endi WireGuard'ga kirib '+' -> 'Clipboard'dan yaratish'ni bosing.");
+                        });
+                    });
+
+                    document.getElementById("openWgBtn").addEventListener("click", () => {
+                        window.location.href = "wireguard://";
+                    });
+
+                } else {
+                    btnText.innerText = "Ulash";
+                    tg.showAlert(data.message || "Xatolik yuz berdi.");
+                }
+            } catch (e) {
+                btnText.innerText = "Ulash";
+                tg.showAlert("Server bilan aloqa uzildi.");
+            }
+        });
+    </script>
+</body>
+</html>
 
