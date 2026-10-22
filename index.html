@@ -11,27 +11,25 @@
         .header { text-align: center; margin-bottom: 20px; margin-top: 10px; }
         .header h1 { margin: 0; font-size: 24px; font-weight: 800; }
         .header p { margin: 5px 0 0; color: #8e8e93; font-size: 14px; }
-        .status-badge { background-color: rgba(255, 59, 48, 0.2); color: #ff3b30; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 30px; transition: all 0.3s ease; }
+        .status-badge { background-color: rgba(255, 59, 48, 0.2); color: #ff3b30; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 30px; }
         .status-badge.connected { background-color: rgba(52, 199, 89, 0.2); color: #34c759; }
-        .vpn-btn-container { position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 30px; }
-        .vpn-btn { width: 160px; height: 160px; border-radius: 50%; background: linear-gradient(145deg, #2c2c2e, #1c1c1e); box-shadow: 10px 10px 20px #121212, -10px -10px 20px #262628; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; border: none; color: white; outline: none; }
-        .vpn-btn:active { transform: scale(0.95); }
-        .vpn-btn svg { width: 45px; height: 45px; margin-bottom: 10px; fill: #ff3b30; transition: fill 0.3s; }
-        .vpn-btn.active svg { fill: #34c759; }
         
-        .action-container { width: 100%; max-width: 400px; display: none; flex-direction: column; }
-        .action-btn { display: block; width: 100%; padding: 16px; margin-bottom: 10px; border-radius: 16px; text-align: center; font-weight: 600; font-size: 16px; text-decoration: none; border: none; cursor: pointer; }
-        .btn-primary { background-color: #34c759; color: white; }
-        .btn-secondary { background-color: #2c2c2e; color: white; }
+        .vpn-btn-container { position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 30px; }
+        .vpn-btn { width: 180px; height: 180px; border-radius: 50%; background: linear-gradient(145deg, #2c2c2e, #1c1c1e); box-shadow: 10px 10px 20px #121212, -10px -10px 20px #262628; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; border: none; color: white; outline: none; transition: all 0.3s; }
+        .vpn-btn:active { transform: scale(0.95); }
+        .vpn-btn svg { width: 60px; height: 60px; margin-bottom: 10px; fill: #ff3b30; transition: fill 0.3s; }
+        .vpn-btn.active svg { fill: #34c759; }
+        .vpn-btn span { font-size: 18px; font-weight: 600; }
 
-        /* Qo'llanma dizayni */
+        .action-container { width: 100%; max-width: 400px; display: none; flex-direction: column; }
+        .action-btn { display: block; width: 100%; padding: 18px; margin-bottom: 15px; border-radius: 16px; text-align: center; font-weight: 600; font-size: 18px; text-decoration: none; border: none; cursor: pointer; }
+        .btn-primary { background-color: #34c759; color: white; box-shadow: 0 4px 15px rgba(52, 199, 89, 0.4); }
+        
         .guide-box { background-color: #2c2c2e; padding: 20px; border-radius: 16px; margin-top: 20px; text-align: left; }
-        .guide-box h3 { margin-top: 0; color: #34c759; font-size: 18px; }
+        .guide-box h3 { margin-top: 0; color: #fff; font-size: 16px; margin-bottom: 15px; }
         .guide-step { display: flex; margin-bottom: 15px; align-items: flex-start; }
-        .step-num { background-color: #34c759; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; margin-right: 10px; flex-shrink: 0; font-size: 14px; }
+        .step-num { background-color: #34c759; color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; margin-right: 10px; flex-shrink: 0; font-size: 13px; }
         .step-text { font-size: 14px; line-height: 1.4; color: #e5e5ea; }
-        .app-links { display: flex; gap: 10px; margin-top: 15px; }
-        .app-btn { flex: 1; text-align: center; padding: 10px; border-radius: 10px; background-color: #1c1c1e; color: white; text-decoration: none; font-size: 12px; border: 1px solid #3a3a3c; }
     </style>
 </head>
 <body>
@@ -78,59 +76,47 @@
                 const data = await res.json();
 
                 if (data.status === "success") {
-                    btnText.innerText = "Ulandi";
+                    btnText.innerText = "Tayyor";
                     mainBtn.classList.add("active");
-                    statusBadge.innerText = "Xavfsiz ulanish faol";
+                    statusBadge.innerText = "Kalit yaratildi";
                     statusBadge.classList.add("connected");
                     
                     btnContainer.style.display = "none";
                     actionContainer.style.display = "flex";
                     
-                    const blob = new Blob([data.config], { type: 'text/plain' });
-                    const fileUrl = URL.createObjectURL(blob);
+                    // Matnni avtomatik nusxalash
+                    navigator.clipboard.writeText(data.config).catch(e => console.log(e));
                     
                     actionContainer.innerHTML = `
-                        <a href="${fileUrl}" download="JT_VPN_${userId}.conf" class="action-btn btn-primary">
-                            📥 VPN faylini yuklab olish
-                        </a>
-                        <button id="copyBtn" class="action-btn btn-secondary">
-                            📋 Matnni nusxalash (Copy)
+                        <button id="openWgBtn" class="action-btn btn-primary">
+                            🚀 WireGuard'ni ochish
                         </button>
                         
                         <div class="guide-box">
-                            <h3>Endi qanday ulanaman? 🤔</h3>
-                            
+                            <h3>Endi nima qilish kerak?</h3>
                             <div class="guide-step">
                                 <div class="step-num">1</div>
-                                <div class="step-text"><b>WireGuard</b> dasturini telefoningizga o'rnating. (Agar o'rnatilmagan bo'lsa, pastdagi tugmalardan yuklab oling).</div>
+                                <div class="step-text">Tepadagi <b>"WireGuard'ni ochish"</b> tugmasini bosing.</div>
                             </div>
-                            
                             <div class="guide-step">
                                 <div class="step-num">2</div>
-                                <div class="step-text">Dasturga kirib, o'ng yuqoridagi <b>"+"</b> belgisini bosing.</div>
+                                <div class="step-text">Dastur ochilgach, o'ng yuqoridagi <b>"+"</b> belgisini bosing.</div>
                             </div>
-
                             <div class="guide-step">
                                 <div class="step-num">3</div>
-                                <div class="step-text">Agar faylni yuklagan bo'lsangiz <b>"Fayldan yaratish"</b> ni, agar nusxalagan bo'lsangiz <b>"Clipboard'dan yaratish"</b> ni tanlang.</div>
+                                <div class="step-text"><b>"Clipboard'dan yaratish" (Create from clipboard)</b> ni tanlang.</div>
                             </div>
-
                             <div class="guide-step">
                                 <div class="step-num">4</div>
-                                <div class="step-text">Ro'yxatda paydo bo'lgan <b>JT_VPN</b> yozuvini yoqing (yashil holatga keltiring). Tayyor!</div>
-                            </div>
-
-                            <div class="app-links">
-                                <a href="https://apps.apple.com/us/app/wireguard/id1441195209" class="app-btn" target="_blank">App Store (iPhone)</a>
-                                <a href="https://play.google.com/store/apps/details?id=com.wireguard.android" class="app-btn" target="_blank">Play Market (Android)</a>
+                                <div class="step-text">Ulanishni yoqing (yashil rang). VPN tayyor!</div>
                             </div>
                         </div>
                     `;
 
-                    document.getElementById("copyBtn").addEventListener("click", () => {
-                        navigator.clipboard.writeText(data.config).then(() => {
-                            tg.showAlert("VPN matni nusxalandi! Endi WireGuard dasturiga o'tib, '+' -> 'Clipboard'dan yaratish'ni bosing.");
-                        });
+                    // WireGuard dasturini ochish
+                    document.getElementById("openWgBtn").addEventListener("click", () => {
+                        // iOS va Android uchun WireGuard URL scheme
+                        window.location.href = "wireguard://";
                     });
 
                 } else {
@@ -145,3 +131,4 @@
     </script>
 </body>
 </html>
+
